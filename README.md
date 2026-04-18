@@ -22,6 +22,7 @@ A simple HTTP server that retrieves Notion pages by ID and renders them as style
    ```
    - Edit `.env` and paste your Notion API key as `NOTION_API_KEY`
    - Optionally set `ROOT_PAGE_ID` to a Notion page ID — the server will redirect `/` to that page
+   - Optionally set `NOTION_WEBHOOK_SECRET` to your Notion webhook signing secret (see Cache Invalidation below)
 
 4. **Share a page with your integration:**
    - Open a Notion page
@@ -63,6 +64,31 @@ http://localhost:3000/page/e1d4a5c3b2f1a9c8d3e4f5a6b7c8d9e0
 - Simple, minimalist whitish styling
 - Supports headings, paragraphs, lists, quotes, code blocks, and more
 - Error handling for invalid or inaccessible pages
+
+## Cache Invalidation
+
+Pages are cached on first load. To force a refresh:
+
+**Force-refresh a single page** (re-fetches and updates cache):
+```
+http://localhost:3000/page/:pageId?refresh=1
+```
+
+**Notion webhook** (automatic — invalidates the page whenever you edit it in Notion):
+1. Go to your Notion integration settings → Webhooks
+2. Add a webhook pointing to `https://your-domain/webhook/notion`
+3. Copy the signing secret into `NOTION_WEBHOOK_SECRET` in `.env`
+
+The webhook will automatically clear the cache for any page you update in Notion, so the next visit fetches fresh content.
+
+**Manual invalidation via API:**
+```bash
+# Invalidate one page
+curl -X DELETE http://localhost:3000/cache/:pageId
+
+# Invalidate all pages
+curl -X POST http://localhost:3000/cache/invalidate
+```
 
 ## Development
 

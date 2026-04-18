@@ -1,4 +1,5 @@
 import express from 'express';
+import { createHmac, timingSafeEqual } from 'crypto';
 import { Client } from '@notionhq/client';
 import 'dotenv/config';
 import { fetchPageData } from './src/fetcher.js';
@@ -55,6 +56,33 @@ app.delete('/cache/:pageId', async (req, res) => {
 app.post('/cache/invalidate', async (_req, res) => {
   const count = await cache.invalidateAll();
   res.json({ invalidated: count });
+});
+
+// Notion webhook — auto-invalidates a page's cache when it's updated in Notion
+app.post('/webhook/notion', express.raw({ type: 'application/json' }), (req, res) => {
+  const secret = process.env.NOTION_WEBHOOK_SECRET;
+  if (secret) {
+    const sig = req.headers['x-notion-signature'];
+    const expected = 'v0=' + createHmac('sha256', secret).update(req.body).digest('hex');
+    try {
+      if (!sig || !timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) {
+        return res.status(401).json({ error: 'Invalid signature.' });
+      }
+    } catch {
+      return res.status(401).json({ error: 'Invalid signature.' });
+    }
+  }
+
+  let event;
+  try { event = JSON.parse(req.body); } catch { return res.status(400).json({ error: 'Bad JSON.' }); }
+
+  const pageId = event?.entity?.id?.replace(/-/g, '');
+  if (pageId) {
+    cache.invalidate(pageId).then(hit => {
+      console.log(`Webhook: invalidated ${pageId} (${hit ? 'hit' : 'miss'})`);
+    });
+  }
+  res.json({ ok: true, pageId: pageId || null });
 });
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
