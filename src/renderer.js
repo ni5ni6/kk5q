@@ -110,7 +110,15 @@ function blocksToMarkdown(blocks) {
   return out;
 }
 
-const htmlTemplate = (content, title) => `<!DOCTYPE html>
+function extractCoverUrl(page) {
+  const cover = page.cover;
+  if (!cover) return null;
+  if (cover.type === 'external') return cover.external.url;
+  if (cover.type === 'file') return cover.file.url;
+  return null;
+}
+
+const htmlTemplate = (content, title, coverUrl) => `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -123,8 +131,9 @@ const htmlTemplate = (content, title) => `<!DOCTYPE html>
       background-color: #fafaf8;
       color: #333;
       line-height: 1.6;
-      padding: 2rem;
     }
+    .cover { width: 100%; height: 280px; object-fit: cover; object-position: center 40%; display: block; }
+    .page-wrap { padding: 2rem; }
     .container { max-width: 800px; margin: 0 auto; background-color: #fff; padding: 3rem; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,.05); }
     h1, h2, h3, h4, h5, h6 { margin-top: 1.5rem; margin-bottom: .75rem; font-weight: 600; color: #222; }
     h1 { font-size: 2rem; border-bottom: 2px solid #f0f0f0; padding-bottom: .5rem; }
@@ -149,13 +158,17 @@ const htmlTemplate = (content, title) => `<!DOCTYPE html>
   </style>
 </head>
 <body>
-  <div class="back-nav"><a href="/">ПОЧЕТНА СТРАНА</a></div>
-  <div class="container">${content}</div>
+  ${coverUrl ? `<img class="cover" src="${coverUrl}" alt="">` : ''}
+  <div class="page-wrap">
+    <div class="back-nav"><a href="/">ПОЧЕТНА СТРАНА</a></div>
+    <div class="container">${content}</div>
+  </div>
 </body>
 </html>`;
 
 export function renderPage(pageData) {
   const title = extractTitle(pageData.page);
+  const coverUrl = extractCoverUrl(pageData.page);
   const html = md.render(blocksToMarkdown(pageData.blocks));
-  return htmlTemplate(html, title);
+  return htmlTemplate(html, title, coverUrl);
 }
