@@ -1,4 +1,24 @@
 // All Notion API calls. Returns plain serialisable data — no rendering logic here.
+import { writeFile, mkdir } from 'fs/promises';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const COVERS_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'covers');
+await mkdir(COVERS_DIR, { recursive: true });
+
+async function downloadCover(pageId, url) {
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) return null;
+    const ct = resp.headers.get('content-type') || '';
+    const ext = ct.includes('png') ? '.png' : ct.includes('gif') ? '.gif' : ct.includes('webp') ? '.webp' : '.jpg';
+    const filename = `${pageId}${ext}`;
+    await writeFile(join(COVERS_DIR, filename), Buffer.from(await resp.arrayBuffer()));
+    return `/covers/${filename}`;
+  } catch {
+    return null;
+  }
+}
 
 const DB_COLS = ['Предлог решења', 'Опис проблема', 'Ниво ургентности (опсег проблема)', 'Статус', 'Број потписника'];
 
@@ -56,5 +76,9 @@ export async function fetchPageData(notion, pageId) {
     }
   }));
 
-  return { page, blocks };
+  const coverUrl = page.cover?.type === 'file'
+    ? await downloadCover(pageId, page.cover.file.url)
+    : null;
+
+  return { page, blocks, coverUrl };
 }

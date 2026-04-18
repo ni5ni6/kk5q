@@ -1,5 +1,7 @@
 import express from 'express';
 import { createHmac, timingSafeEqual } from 'crypto';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { Client } from '@notionhq/client';
 import 'dotenv/config';
 import { fetchPageData } from './src/fetcher.js';
@@ -8,6 +10,9 @@ import * as cache from './src/cache.js';
 
 const app = express();
 const port = process.env.PORT || 3000;
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+app.use('/covers', express.static(join(__dirname, 'public', 'covers')));
 
 const notion = new Client({ auth: process.env.NOTION_API_KEY });
 

@@ -110,11 +110,9 @@ function blocksToMarkdown(blocks) {
   return out;
 }
 
-function extractCoverUrl(page) {
-  const cover = page.cover;
-  if (!cover) return null;
-  if (cover.type === 'external') return cover.external.url;
-  if (cover.type === 'file') return cover.file.url;
+function extractCoverUrl(page, localCoverUrl) {
+  if (localCoverUrl) return localCoverUrl;
+  if (page.cover?.type === 'external') return page.cover.external.url;
   return null;
 }
 
@@ -171,7 +169,7 @@ const htmlTemplate = (content, title, coverUrl) => `<!DOCTYPE html>
 
 export function renderPage(pageData) {
   const title = extractTitle(pageData.page);
-  const coverUrl = extractCoverUrl(pageData.page);
+  const coverUrl = extractCoverUrl(pageData.page, pageData.coverUrl);
   const html = md.render(blocksToMarkdown(pageData.blocks));
   return htmlTemplate(html, title, coverUrl);
 }
