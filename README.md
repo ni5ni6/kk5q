@@ -21,6 +21,7 @@ A simple HTTP server that retrieves Notion pages by ID and renders them as style
    cp .env.example .env
    ```
    - Edit `.env` and paste your Notion API key as `NOTION_API_KEY`
+   - Optionally set `ROOT_PAGE_ID` to a Notion page ID — the server will redirect `/` to that page
 
 4. **Share a page with your integration:**
    - Open a Notion page
@@ -37,7 +38,12 @@ npm start
 
 The server will run at `http://localhost:3000`
 
-**Access a page:**
+**Access the root page** (if `ROOT_PAGE_ID` is set):
+```
+http://localhost:3000/
+```
+
+**Access a specific page:**
 ```
 http://localhost:3000/page/:pageId
 ```

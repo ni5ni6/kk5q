@@ -15,6 +15,12 @@ function normalizePageId(pageId) {
   return /^[a-f0-9]{32}$/.test(clean) ? clean : null;
 }
 
+app.get('/', (_req, res) => {
+  const rootPageId = process.env.ROOT_PAGE_ID;
+  if (!rootPageId) return res.status(404).send('ROOT_PAGE_ID not configured.');
+  res.redirect(`/page/${rootPageId}`);
+});
+
 app.get('/page/:pageId', async (req, res) => {
   try {
     const pageId = normalizePageId(req.params.pageId);
