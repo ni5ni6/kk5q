@@ -76,6 +76,12 @@ app.post('/webhook/notion', express.raw({ type: 'application/json' }), (req, res
   let event;
   try { event = JSON.parse(req.body); } catch { return res.status(400).json({ error: 'Bad JSON.' }); }
 
+  // Notion sends this once to verify the endpoint — log it so you can copy it
+  if (event?.verification_token) {
+    console.log(`\n*** Notion verification token: ${event.verification_token} ***\n`);
+    return res.json({ ok: true });
+  }
+
   const pageId = event?.entity?.id?.replace(/-/g, '');
   if (pageId) {
     cache.invalidate(pageId).then(hit => {
