@@ -149,7 +149,7 @@ const htmlTemplate = (content, title) => `<!DOCTYPE html>
   </style>
 </head>
 <body>
-  <div class="back-nav"><a href="javascript:history.back()">&larr; Back</a></div>
+  <div class="back-nav"><a href="/">&larr; ПОЧЕТНА СТРАНА</a></div>
   <div class="container">${content}</div>
 </body>
 </html>`;
