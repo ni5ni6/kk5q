@@ -75,11 +75,19 @@ http://localhost:3000/page/:pageId?refresh=1
 ```
 
 **Notion webhook** (automatic — invalidates the page whenever you edit it in Notion):
-1. Go to your Notion integration settings → Webhooks
-2. Add a webhook pointing to `https://your-domain/webhook/notion`
-3. Copy the signing secret into `NOTION_WEBHOOK_SECRET` in `.env`
 
-The webhook will automatically clear the cache for any page you update in Notion, so the next visit fetches fresh content.
+1. Deploy the server to a public HTTPS URL (e.g. `https://kk51.rs`)
+2. Go to [notion.so/my-integrations](https://www.notion.so/my-integrations) → your integration → **Webhooks** → **Add webhook**
+3. Set the URL to `https://your-domain/webhook/notion`
+4. Select event types: **Page** only (uncheck Database, Data source, View, Comment)
+5. Click **Create subscription** — Notion will POST a verification token to your server
+6. Check your server logs for a line like:
+   ```
+   *** Notion verification token: secret_xxxxxxxxx ***
+   ```
+7. Paste that token into the Notion "Verify subscription" dialog
+
+Once active, the webhook fires automatically for every page the integration has access to — no per-page configuration needed. `NOTION_WEBHOOK_SECRET` is optional (signature verification); the server works without it.
 
 **Manual invalidation via API:**
 ```bash
