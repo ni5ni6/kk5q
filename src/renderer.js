@@ -143,9 +143,13 @@ const htmlTemplate = (content, title) => `<!DOCTYPE html>
     table th, table td { border: 1px solid #e0e0e0; padding: .75rem; text-align: left; }
     table th { background-color: #f9f9f9; font-weight: 600; color: #222; }
     hr { border: none; border-top: 1px solid #e0e0e0; margin: 2rem 0; }
+    .back-nav { max-width: 800px; margin: 0 auto 1rem; }
+    .back-nav a { color: #888; text-decoration: none; font-size: .9rem; }
+    .back-nav a:hover { color: #333; }
   </style>
 </head>
 <body>
+  <div class="back-nav"><a href="javascript:history.back()">&larr; Back</a></div>
   <div class="container">${content}</div>
 </body>
 </html>`;
