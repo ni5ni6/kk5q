@@ -1,8 +1,10 @@
-import { readFile, writeFile, unlink, readdir } from 'fs/promises';
+import { readFile, writeFile, unlink, readdir, mkdir } from 'fs/promises';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const CACHE_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'cache');
+
+await mkdir(CACHE_DIR, { recursive: true });
 
 export async function get(pageId) {
   try {
