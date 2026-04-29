@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="sr" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{title}}</title>
+  <meta property="og:title" content="{{title}}">
+  <meta property="og:type" content="website">
+  {{ogImage}}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+  <style>
+    .cover { width: 100%; height: 280px; object-fit: cover; object-position: center 40%; display: block; }
+    .page-wrap { padding: 2rem; }
+    .back-nav { margin-bottom: 1rem; }
+    .back-nav a { color: var(--pico-muted-color); text-decoration: none; font-size: .9rem; }
+    .back-nav a:hover { color: var(--pico-color); }
+  </style>
+</head>
+<body>
+  {{cover}}
+  <div class="page-wrap">
+    <div class="container back-nav"><a href="/">ПОЧЕТНА СТРАНА</a></div>
+    <main class="container">{{content}}</main>
+  </div>
+</body>
+</html>

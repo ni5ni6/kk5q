@@ -1,5 +1,11 @@
 // Pure rendering — no API calls. Converts fetched page data to HTML.
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import MarkdownIt from 'markdown-it';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const templateHtml = readFileSync(join(__dirname, 'template.html'), 'utf8');
 
 const md = new MarkdownIt();
 
@@ -116,56 +122,14 @@ function extractCoverUrl(page, localCoverUrl) {
   return null;
 }
 
-const htmlTemplate = (content, title, coverUrl) => `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${title || 'Notion Page'}</title>
-  <meta property="og:title" content="${title || 'Notion Page'}">
-  <meta property="og:type" content="website">
-  ${coverUrl ? `<meta property="og:image" content="${coverUrl}">` : ''}
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-      background-color: #fafaf8;
-      color: #333;
-      line-height: 1.6;
-    }
-    .cover { width: 100%; height: 280px; object-fit: cover; object-position: center 40%; display: block; }
-    .page-wrap { padding: 2rem; }
-    .container { max-width: 800px; margin: 0 auto; background-color: #fff; padding: 3rem; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,.05); }
-    h1, h2, h3, h4, h5, h6 { margin-top: 1.5rem; margin-bottom: .75rem; font-weight: 600; color: #222; }
-    h1 { font-size: 2rem; border-bottom: 2px solid #f0f0f0; padding-bottom: .5rem; }
-    h2 { font-size: 1.5rem; }
-    h3 { font-size: 1.25rem; }
-    p { margin-bottom: 1rem; }
-    a { color: #666; text-decoration: underline; transition: color .2s; }
-    a:hover { color: #333; }
-    ul, ol { margin-left: 2rem; margin-bottom: 1rem; }
-    li { margin-bottom: .5rem; }
-    blockquote { border-left: 4px solid #e0e0e0; padding-left: 1rem; margin: 0 0 1rem; color: #666; font-style: italic; }
-    code { background-color: #f5f5f5; padding: .2rem .5rem; border-radius: 3px; font-family: 'Monaco','Menlo','Ubuntu Mono',monospace; font-size: .9em; color: #555; }
-    pre { background-color: #f5f5f5; padding: 1rem; border-radius: 4px; overflow-x: auto; margin-bottom: 1rem; }
-    pre code { background: transparent; padding: 0; color: #333; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
-    table th, table td { border: 1px solid #e0e0e0; padding: .75rem; text-align: left; }
-    table th { background-color: #f9f9f9; font-weight: 600; color: #222; }
-    hr { border: none; border-top: 1px solid #e0e0e0; margin: 2rem 0; }
-    .back-nav { max-width: 800px; margin: 0 auto 1rem; }
-    .back-nav a { color: #888; text-decoration: none; font-size: .9rem; }
-    .back-nav a:hover { color: #333; }
-  </style>
-</head>
-<body>
-  ${coverUrl ? `<img class="cover" src="${coverUrl}" alt="">` : ''}
-  <div class="page-wrap">
-    <div class="back-nav"><a href="/">ПОЧЕТНА СТРАНА</a></div>
-    <div class="container">${content}</div>
-  </div>
-</body>
-</html>`;
+function htmlTemplate(content, title, coverUrl) {
+  const safeTitle = title || 'Notion Page';
+  return templateHtml
+    .replaceAll('{{title}}', safeTitle)
+    .replace('{{ogImage}}', coverUrl ? `<meta property="og:image" content="${coverUrl}">` : '')
+    .replace('{{cover}}', coverUrl ? `<img class="cover" src="${coverUrl}" alt="">` : '')
+    .replace('{{content}}', content);
+}
 
 export function renderPage(pageData) {
   const title = extractTitle(pageData.page);
