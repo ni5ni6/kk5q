@@ -7,7 +7,7 @@ import MarkdownIt from 'markdown-it';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const templateHtml = readFileSync(join(__dirname, 'template.html'), 'utf8');
 
-const md = new MarkdownIt();
+const md = new MarkdownIt({ html: true });
 
 const DB_COLS = ['Предлог решења', 'Опис проблема', 'Ниво ургентности (опсег проблема)', 'Статус', 'Број потписника'];
 
@@ -33,9 +33,18 @@ function extractCell(prop) {
   switch (prop.type) {
     case 'title':        return prop.title.map(t => t.plain_text).join('');
     case 'rich_text':    return prop.rich_text.map(t => t.plain_text).join('');
-    case 'select':       return prop.select?.name || '';
-    case 'multi_select': return prop.multi_select.map(s => s.name).join(', ');
-    case 'status':       return prop.status?.name || '';
+    case 'select': {
+      const s = prop.select;
+      if (!s) return '';
+      return `<span class="badge badge-${s.color || 'default'}">${s.name}</span>`;
+    }
+    case 'multi_select':
+      return prop.multi_select.map(s => `<span class="badge badge-${s.color || 'default'}">${s.name}</span>`).join(' ');
+    case 'status': {
+      const s = prop.status;
+      if (!s) return '';
+      return `<span class="badge badge-${s.color || 'default'}">${s.name}</span>`;
+    }
     case 'number':       return prop.number != null ? String(prop.number) : '';
     case 'checkbox':     return prop.checkbox ? '✓' : '';
     case 'date':         return prop.date?.start || '';
