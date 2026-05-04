@@ -24,13 +24,21 @@ export async function invalidate(pageId) {
   try {
     await unlink(join(CACHE_DIR, `${pageId}.json`));
     return true;
-  } catch {
+  } catch (err) {
+    if (err.code !== 'ENOENT') {
+     console.error(`[cache] Failed to invalidate page ${pageId}:`, err.message);
+    }
     return false;
   }
 }
 
 export async function invalidateAll() {
-  const files = await readdir(CACHE_DIR);
-  await Promise.all(files.map(f => unlink(join(CACHE_DIR, f))));
-  return files.length;
+  try {
+    const files = await readdir(CACHE_DIR);
+    await Promise.all(files.map(f => unlink(join(CACHE_DIR, f))));
+    return files.length;
+  } catch (err) {
+    console.error(`[cache] Failed to invalidate all:`, err.message);
+    return 0;
+  }
 }

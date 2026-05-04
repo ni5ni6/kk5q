@@ -51,7 +51,7 @@ app.get('/page/:pageId', async (req, res) => {
 });
 
 // Invalidate a single page
-app.delete('/cache/:pageId', async (req, res) => {
+app.post('/cache/invalidate/:pageId', async (req, res) => {
   const pageId = normalizePageId(req.params.pageId);
   if (!pageId) return res.status(400).json({ error: 'Invalid page ID.' });
   res.json({ invalidated: await cache.invalidate(pageId) });
