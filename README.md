@@ -23,6 +23,7 @@ A simple HTTP server that retrieves Notion pages by ID and renders them as style
    - Edit `.env` and paste your Notion API key as `NOTION_API_KEY`
    - Optionally set `ROOT_PAGE_ID` to a Notion page ID — the server will redirect `/` to that page
    - Optionally set `NOTION_WEBHOOK_SECRET` to your Notion webhook signing secret (see Cache Invalidation below)
+   - Optionally set `CHECKBOX_UNCHECKED` (default `☐`) and `CHECKBOX_CHECKED` (default `☑`) to customize the bullet characters used for Notion to-do list items
 
 4. **Share a page with your integration:**
    - Open a Notion page
@@ -62,7 +63,7 @@ http://localhost:3000/page/e1d4a5c3b2f1a9c8d3e4f5a6b7c8d9e0
 - Converts Notion blocks to markdown
 - Renders markdown as clean HTML
 - Simple, minimalist whitish styling
-- Supports headings, paragraphs, lists, quotes, code blocks, and more
+- Supports headings, paragraphs, lists, checkboxes, quotes, code blocks, child pages, link to pages, bookmark and more
 - Error handling for invalid or inaccessible pages
 
 ## Cache Invalidation

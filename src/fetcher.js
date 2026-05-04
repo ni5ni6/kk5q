@@ -74,6 +74,23 @@ export async function fetchPageData(notion, pageId) {
         block._dbRows = null;
       }
     }
+    if (block.type === 'link_to_page') {
+      try {
+        const ref = block.link_to_page;
+        if (ref.type === 'page_id') {
+          const p = await notion.pages.retrieve({ page_id: ref.page_id });
+          const titleProp = Object.values(p.properties).find(pr => pr.type === 'title');
+          block._title = titleProp?.title[0]?.plain_text || 'Untitled';
+          block._targetId = ref.page_id.replace(/-/g, '');
+        } else if (ref.type === 'database_id') {
+          const db = await notion.databases.retrieve({ database_id: ref.database_id });
+          block._title = db.title[0]?.plain_text || 'Untitled';
+          block._targetId = ref.database_id.replace(/-/g, '');
+        }
+      } catch {
+        block._title = null;
+      }
+    }
   }));
 
   const coverUrl = page.cover?.type === 'file'

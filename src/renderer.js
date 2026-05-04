@@ -9,6 +9,9 @@ const templateHtml = readFileSync(join(__dirname, 'template.html'), 'utf8');
 
 const md = new MarkdownIt({ html: true });
 
+const CHECKBOX_UNCHECKED = process.env.CHECKBOX_UNCHECKED || '☐';
+const CHECKBOX_CHECKED   = process.env.CHECKBOX_CHECKED   || '☑';
+
 const DB_COLS = ['Предлог решења', 'Опис проблема', 'Ниво ургентности (опсег проблема)', 'Статус', 'Број потписника'];
 
 function extractTitle(page) {
@@ -75,6 +78,11 @@ function blocksToMarkdown(blocks) {
         out += text ? `${text}\n\n` : '\n';
         break;
       }
+      case 'to_do': {
+        const bullet = data.checked ? CHECKBOX_CHECKED : CHECKBOX_UNCHECKED;
+        out += `${bullet} ${richText(data.rich_text)}\n`;
+        break;
+      }
       case 'bulleted_list_item':
         out += `- ${richText(data.rich_text)}\n`;
         break;
@@ -89,6 +97,26 @@ function blocksToMarkdown(blocks) {
         break;
       case 'divider':
         out += `---\n\n`;
+        break;
+      case 'child_page': {
+        const pageId = block.id.replace(/-/g, '');
+        out += `[${data.title || 'Untitled'}](/page/${pageId})\n\n`;
+        break;
+      }
+      case 'link_to_page': {
+        if (block._title && block._targetId) {
+          out += `[${block._title}](/page/${block._targetId})\n\n`;
+        }
+        break;
+      }
+      case 'bookmark': {
+        const caption = data.caption?.length ? richText(data.caption) : data.url;
+        out += `[${caption}](${data.url})\n\n`;
+        break;
+      }
+      case 'link_preview':
+      case 'embed':
+        out += `[${data.url}](${data.url})\n\n`;
         break;
       case 'table': {
         const rows = block._rows || [];
