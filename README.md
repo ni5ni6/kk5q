@@ -66,6 +66,11 @@ http://localhost:3000/page/e1d4a5c3b2f1a9c8d3e4f5a6b7c8d9e0
 - Supports headings, paragraphs, lists, checkboxes, quotes, code blocks, child pages, link to pages, bookmark and more
 - Error handling for invalid or inaccessible pages
 
+Doesn't support:
+
+- indented blocks
+- callouts
+
 ## Cache Invalidation
 
 Pages are cached on first load. To force a refresh:
