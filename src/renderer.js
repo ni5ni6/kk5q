@@ -168,6 +168,44 @@ function htmlTemplate(content, title, coverUrl) {
     .replace('{{content}}', content);
 }
 
+export function renderHomepage(pages) {
+  const items = pages.map(page => {
+    const titleProp = Object.values(page.properties).find(p => p.type === 'title');
+    const title = titleProp?.title[0]?.plain_text || 'Untitled';
+    const id = page.id.replace(/-/g, '');
+    const edited = page.last_edited_time ? new Date(page.last_edited_time).toLocaleDateString('sr-RS') : '';
+    return `<li><a href="/page/${id}">${title}</a>${edited ? `<small>${edited}</small>` : ''}</li>`;
+  }).join('\n');
+
+  return `<!DOCTYPE html>
+<html lang="sr" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Почетна страна</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+  <style>
+    .page-wrap { padding: 2rem; }
+    ul.pages { list-style: none; padding: 0; }
+    ul.pages li { display: flex; align-items: baseline; gap: 1rem; padding: .6rem 0; border-bottom: 1px solid var(--pico-muted-border-color); }
+    ul.pages li:last-child { border-bottom: none; }
+    ul.pages li a { font-size: 1.05rem; text-decoration: none; flex: 1; }
+    ul.pages li a:hover { text-decoration: underline; }
+    ul.pages li small { color: var(--pico-muted-color); white-space: nowrap; }
+    .empty { color: var(--pico-muted-color); font-style: italic; }
+  </style>
+</head>
+<body>
+  <div class="page-wrap">
+    <main class="container">
+      <h1>Странице</h1>
+      ${pages.length ? `<ul class="pages">\n${items}\n</ul>` : '<p class="empty">Нема доступних страница.</p>'}
+    </main>
+  </div>
+</body>
+</html>`;
+}
+
 export function renderPage(pageData) {
   const title = extractTitle(pageData.page);
   const coverUrl = extractCoverUrl(pageData.page, pageData.coverUrl);

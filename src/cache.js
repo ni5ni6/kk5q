@@ -32,6 +32,20 @@ export async function invalidate(pageId) {
   }
 }
 
+// Invalidates all cache entries whose filename contains the given pageId.
+// Used by webhooks in OAuth mode where the workspace prefix isn't known.
+export async function invalidateByPageId(pageId) {
+  try {
+    const files = await readdir(CACHE_DIR);
+    const matches = files.filter(f => f.includes(pageId));
+    await Promise.all(matches.map(f => unlink(join(CACHE_DIR, f))));
+    return matches.length;
+  } catch (err) {
+    console.error(`[cache] Failed to invalidate by pageId ${pageId}:`, err.message);
+    return 0;
+  }
+}
+
 export async function invalidateAll() {
   try {
     const files = await readdir(CACHE_DIR);

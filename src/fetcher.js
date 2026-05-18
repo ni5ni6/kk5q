@@ -55,6 +55,24 @@ async function resolveLinkedDatabase(notion, block) {
   }
 }
 
+export async function fetchSharedPages(notion) {
+  const pages = [];
+  let cursor;
+  let hasMore = true;
+  while (hasMore) {
+    const resp = await notion.search({
+      filter: { value: 'page', property: 'object' },
+      sort: { direction: 'descending', timestamp: 'last_edited_time' },
+      page_size: 100,
+      start_cursor: cursor,
+    });
+    pages.push(...resp.results);
+    cursor = resp.next_cursor;
+    hasMore = resp.has_more;
+  }
+  return pages;
+}
+
 export async function fetchPageData(notion, pageId) {
   const page = await notion.pages.retrieve({ page_id: pageId });
   const blocks = await fetchAllBlocks(notion, pageId);

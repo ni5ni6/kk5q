@@ -1,43 +1,76 @@
 import express from 'express';
+import session from 'express-session';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { Client } from '@notionhq/client';
 import 'dotenv/config';
-import { fetchPageData } from './src/fetcher.js';
-import { renderPage } from './src/renderer.js';
+import { fetchPageData, fetchSharedPages } from './src/fetcher.js';
+import { renderPage, renderHomepage } from './src/renderer.js';
 import * as cache from './src/cache.js';
+import { requireAuth, notionTokenForReq, workspaceIdForReq, registerAuthRoutes } from './src/auth.js';
 
 const app = express();
 const port = process.env.PORT || 3000;
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-app.use('/covers', express.static(join(__dirname, 'public', 'covers')));
+// OAuth mode when NOTION_CLIENT_ID is set; internal API key mode otherwise.
+const oauthMode = !!(process.env.NOTION_CLIENT_ID && process.env.NOTION_CLIENT_SECRET);
 
-const notion = new Client({ auth: process.env.NOTION_API_KEY });
+// In internal mode, a single global client is used.
+const internalNotion = oauthMode ? null : new Client({ auth: process.env.NOTION_API_KEY });
+
+app.use('/covers', express.static(join(__dirname, 'public', 'covers')));
+app.use(express.json());
+
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'change-me-in-production',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: process.env.NODE_ENV === 'production', httpOnly: true, maxAge: 7 * 24 * 60 * 60 * 1000 },
+}));
+
+if (oauthMode) registerAuthRoutes(app);
 
 function normalizePageId(pageId) {
   const clean = pageId.replace(/[-\s]/g, '').toLowerCase();
   return /^[a-f0-9]{32}$/.test(clean) ? clean : null;
 }
 
-app.get('/', (_req, res) => {
-  const rootPageId = process.env.ROOT_PAGE_ID;
-  if (!rootPageId) return res.status(404).send('ROOT_PAGE_ID not configured.');
-  res.redirect(`/page/${rootPageId}`);
+function getNotion(req) {
+  if (oauthMode) return new Client({ auth: notionTokenForReq(req) });
+  return internalNotion;
+}
+
+function cacheKey(req, pageId) {
+  return oauthMode ? `${workspaceIdForReq(req)}_${pageId}` : pageId;
+}
+
+const pageMiddleware = oauthMode ? [requireAuth] : [];
+
+app.get('/', ...pageMiddleware, async (req, res) => {
+  try {
+    const pages = await fetchSharedPages(getNotion(req));
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(renderHomepage(pages));
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Server error.');
+  }
 });
 
-app.get('/page/:pageId', async (req, res) => {
+app.get('/page/:pageId', ...pageMiddleware, async (req, res) => {
   try {
     const pageId = normalizePageId(req.params.pageId);
     if (!pageId) return res.status(400).send('Invalid page ID.');
 
+    const key = cacheKey(req, pageId);
     const forceRefresh = req.query.refresh === '1';
-    let pageData = forceRefresh ? null : await cache.get(pageId);
+    let pageData = forceRefresh ? null : await cache.get(key);
 
     if (!pageData) {
-      pageData = await fetchPageData(notion, pageId);
-      await cache.set(pageId, pageData);
+      pageData = await fetchPageData(getNotion(req), pageId);
+      await cache.set(key, pageData);
     }
 
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -54,7 +87,8 @@ app.get('/page/:pageId', async (req, res) => {
 app.post('/cache/invalidate/:pageId', async (req, res) => {
   const pageId = normalizePageId(req.params.pageId);
   if (!pageId) return res.status(400).json({ error: 'Invalid page ID.' });
-  res.json({ invalidated: await cache.invalidate(pageId) });
+  const key = cacheKey(req, pageId);
+  res.json({ invalidated: await cache.invalidate(key) });
 });
 
 // Invalidate all cached pages
@@ -81,7 +115,6 @@ app.post('/webhook/notion', express.raw({ type: 'application/json' }), (req, res
   let event;
   try { event = JSON.parse(req.body); } catch { return res.status(400).json({ error: 'Bad JSON.' }); }
 
-  // Notion sends this once to verify the endpoint — log it so you can copy it
   if (event?.verification_token) {
     console.log(`\n*** Notion verification token: ${event.verification_token} ***\n`);
     return res.json({ ok: true });
@@ -89,13 +122,14 @@ app.post('/webhook/notion', express.raw({ type: 'application/json' }), (req, res
 
   const pageId = event?.entity?.id?.replace(/-/g, '');
   if (pageId) {
-    cache.invalidate(pageId).then(hit => {
-      console.log(`Webhook: invalidated ${pageId} (${hit ? 'hit' : 'miss'})`);
+    // Webhook doesn't carry workspace info — invalidate all matching page entries.
+    cache.invalidateByPageId(pageId).then(count => {
+      console.log(`Webhook: invalidated ${count} cache entries for ${pageId}`);
     });
   }
   res.json({ ok: true, pageId: pageId || null });
 });
 
-app.get('/health', (_req, res) => res.json({ status: 'ok' }));
+app.get('/health', (_req, res) => res.json({ status: 'ok', mode: oauthMode ? 'oauth' : 'internal' }));
 
-app.listen(port, () => console.log(`Server running at http://localhost:${port}`));
+app.listen(port, () => console.log(`Server running at http://localhost:${port} (${oauthMode ? 'OAuth' : 'internal API key'} mode)`));

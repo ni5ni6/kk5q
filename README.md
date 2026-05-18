@@ -9,27 +9,37 @@ A simple HTTP server that retrieves Notion pages by ID and renders them as style
    npm install
    ```
 
-2. **Create a Notion integration:**
-   - Go to https://www.notion.so/my-integrations
-   - Click "Create new integration"
-   - Give it a name (e.g., "notion-to-html")
-   - Accept the defaults and create
-   - Copy the API key
+The server supports two authentication modes. Pick one.
 
-3. **Configure environment:**
-   ```bash
-   cp .env.example .env
+### Mode A — Internal integration (single workspace, no login)
+
+Use this when the server is private and you want one fixed workspace.
+
+1. Go to [notion.so/my-integrations](https://www.notion.so/my-integrations), create an **internal** integration, and copy the secret.
+2. In `.env`, set `NOTION_API_KEY` and leave `NOTION_CLIENT_ID` empty.
+3. Share any Notion pages you want to expose with your integration (page `...` menu → Connections).
+
+### Mode B — Public OAuth integration (multi-workspace, users log in)
+
+Use this when others should be able to connect their own Notion workspaces.
+
+1. Go to [notion.so/my-integrations](https://www.notion.so/my-integrations), create a **public** integration.
+2. Under **OAuth Domain & URIs**, add your redirect URI (e.g. `https://your-domain/auth/notion/callback`).
+3. Copy the **Client ID** and **Client Secret**.
+4. In `.env`:
    ```
-   - Edit `.env` and paste your Notion API key as `NOTION_API_KEY`
-   - Optionally set `ROOT_PAGE_ID` to a Notion page ID — the server will redirect `/` to that page
-   - Optionally set `NOTION_WEBHOOK_SECRET` to your Notion webhook signing secret (see Cache Invalidation below)
-   - Optionally set `CHECKBOX_UNCHECKED` (default `☐`) and `CHECKBOX_CHECKED` (default `☑`) to customize the bullet characters used for Notion to-do list items
+   NOTION_CLIENT_ID=your_client_id
+   NOTION_CLIENT_SECRET=your_client_secret
+   NOTION_REDIRECT_URI=https://your-domain/auth/notion/callback
+   SESSION_SECRET=a-long-random-string
+   ```
+5. Leave `NOTION_API_KEY` unset (it is ignored in OAuth mode).
 
-4. **Share a page with your integration:**
-   - Open a Notion page
-   - Click the share button
-   - Select your integration from the "Invite" dropdown
-   - Click "Invite"
+When `NOTION_CLIENT_ID` and `NOTION_CLIENT_SECRET` are both set, the server runs in OAuth mode. Users are redirected to Notion to authorize and are sent back to the page they requested. `/auth/logout` ends the session.
+
+**Other `.env` options (both modes):**
+- `NOTION_WEBHOOK_SECRET` — webhook signing secret (see Cache Invalidation)
+- `CHECKBOX_UNCHECKED` / `CHECKBOX_CHECKED` — bullet characters for to-do items (defaults: `☐` / `☑`)
 
 ## Usage
 
@@ -40,7 +50,7 @@ npm start
 
 The server will run at `http://localhost:3000`
 
-**Access the root page** (if `ROOT_PAGE_ID` is set):
+**Homepage** — lists all pages shared with your integration:
 ```
 http://localhost:3000/
 ```
