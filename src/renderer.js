@@ -168,42 +168,71 @@ function htmlTemplate(content, title, coverUrl) {
     .replace('{{content}}', content);
 }
 
-export function renderHomepage(pages) {
-  const items = pages.map(page => {
-    const titleProp = Object.values(page.properties).find(p => p.type === 'title');
-    const title = titleProp?.title[0]?.plain_text || 'Untitled';
-    const id = page.id.replace(/-/g, '');
-    const edited = page.last_edited_time ? new Date(page.last_edited_time).toLocaleDateString('sr-RS') : '';
-    return `<li><a href="/page/${id}">${title}</a>${edited ? `<small>${edited}</small>` : ''}</li>`;
-  }).join('\n');
+const adminStyles = `
+    .page-wrap { padding: 2rem; }
+    ul.pages { list-style: none; padding: 0; }
+    ul.pages li { display: flex; align-items: center; gap: 1rem; padding: .6rem 0; border-bottom: 1px solid var(--pico-muted-border-color); }
+    ul.pages li:last-child { border-bottom: none; }
+    ul.pages li a { font-size: 1.05rem; text-decoration: none; flex: 1; }
+    ul.pages li a:hover { text-decoration: underline; }
+    ul.pages li small { color: var(--pico-muted-color); white-space: nowrap; }
+    ul.pages li button { margin: 0; padding: .25rem .75rem; font-size: .85rem; }
+    .empty { color: var(--pico-muted-color); font-style: italic; }
+    .current-badge { font-size: .75rem; background: var(--pico-primary-background); color: var(--pico-primary); padding: .15rem .5rem; border-radius: 1rem; white-space: nowrap; }`;
 
+function pageListItem(page, extraFn) {
+  const titleProp = Object.values(page.properties).find(p => p.type === 'title');
+  const title = titleProp?.title[0]?.plain_text || 'Untitled';
+  const id = page.id.replace(/-/g, '');
+  const edited = page.last_edited_time ? new Date(page.last_edited_time).toLocaleDateString('sr-RS') : '';
+  return { id, title, edited, extra: extraFn ? extraFn(id, title) : '' };
+}
+
+function adminShell(title, body) {
   return `<!DOCTYPE html>
 <html lang="sr" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Почетна страна</title>
+  <title>${title}</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
-  <style>
-    .page-wrap { padding: 2rem; }
-    ul.pages { list-style: none; padding: 0; }
-    ul.pages li { display: flex; align-items: baseline; gap: 1rem; padding: .6rem 0; border-bottom: 1px solid var(--pico-muted-border-color); }
-    ul.pages li:last-child { border-bottom: none; }
-    ul.pages li a { font-size: 1.05rem; text-decoration: none; flex: 1; }
-    ul.pages li a:hover { text-decoration: underline; }
-    ul.pages li small { color: var(--pico-muted-color); white-space: nowrap; }
-    .empty { color: var(--pico-muted-color); font-style: italic; }
+  <style>${adminStyles}
   </style>
 </head>
 <body>
   <div class="page-wrap">
     <main class="container">
-      <h1>Странице</h1>
-      ${pages.length ? `<ul class="pages">\n${items}\n</ul>` : '<p class="empty">Нема доступних страница.</p>'}
+      ${body}
     </main>
   </div>
 </body>
 </html>`;
+}
+
+export function renderAdminPages(pages) {
+  const items = pages.map(page => {
+    const { id, title, edited } = pageListItem(page);
+    return `<li><a href="/page/${id}">${title}</a>${edited ? `<small>${edited}</small>` : ''}</li>`;
+  }).join('\n');
+
+  const body = `<h1>Странице</h1>
+      ${pages.length ? `<ul class="pages">\n${items}\n</ul>` : '<p class="empty">Нема доступних страница.</p>'}`;
+  return adminShell('Странице', body);
+}
+
+export function renderNewPage(pages, defaultPageId) {
+  const items = pages.map(page => {
+    const { id, title, edited } = pageListItem(page);
+    const isCurrent = id === defaultPageId;
+    const btn = isCurrent
+      ? `<span class="current-badge">подразумевана</span>`
+      : `<form method="POST" action="/new"><input type="hidden" name="pageId" value="${id}"><button type="submit">Постави</button></form>`;
+    return `<li><a href="/page/${id}">${title}</a>${edited ? `<small>${edited}</small>` : ''}${btn}</li>`;
+  }).join('\n');
+
+  const body = `<h1>Избор подразумеване странице</h1>
+      ${pages.length ? `<ul class="pages">\n${items}\n</ul>` : '<p class="empty">Нема доступних страница.</p>'}`;
+  return adminShell('Избор подразумеване странице', body);
 }
 
 export function renderPage(pageData) {

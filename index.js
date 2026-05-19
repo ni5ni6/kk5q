@@ -1,18 +1,33 @@
 import express from 'express';
 import session from 'express-session';
 import { createHmac, timingSafeEqual } from 'crypto';
+import { readFile, writeFile, mkdir } from 'fs/promises';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { Client } from '@notionhq/client';
 import 'dotenv/config';
 import { fetchPageData, fetchSharedPages } from './src/fetcher.js';
-import { renderPage, renderHomepage } from './src/renderer.js';
+import { renderPage, renderAdminPages, renderNewPage } from './src/renderer.js';
 import * as cache from './src/cache.js';
 import { requireAuth, notionTokenForReq, workspaceIdForReq, registerAuthRoutes } from './src/auth.js';
 
 const app = express();
 const port = process.env.PORT || 3000;
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+const DEFAULT_PAGE_FILE = join(__dirname, 'cache', 'default-page.json');
+let defaultPageId = null;
+
+try {
+  const data = JSON.parse(await readFile(DEFAULT_PAGE_FILE, 'utf8'));
+  defaultPageId = data.pageId || null;
+} catch { /* no saved default yet */ }
+
+async function saveDefaultPage(pageId) {
+  await mkdir(join(__dirname, 'cache'), { recursive: true });
+  await writeFile(DEFAULT_PAGE_FILE, JSON.stringify({ pageId }));
+  defaultPageId = pageId;
+}
 
 // OAuth mode when NOTION_CLIENT_ID is set; internal API key mode otherwise.
 const oauthMode = !!(process.env.NOTION_CLIENT_ID && process.env.NOTION_CLIENT_SECRET);
@@ -48,15 +63,38 @@ function cacheKey(req, pageId) {
 
 const pageMiddleware = oauthMode ? [requireAuth] : [];
 
-app.get('/', ...pageMiddleware, async (req, res) => {
+app.get('/', (req, res) => {
+  if (!defaultPageId) return res.status(400).send('No default page set. Visit /new to choose one.');
+  res.redirect(`/page/${defaultPageId}`);
+});
+
+app.get('/admin/pages', ...pageMiddleware, async (req, res) => {
   try {
     const pages = await fetchSharedPages(getNotion(req));
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.send(renderHomepage(pages));
+    res.send(renderAdminPages(pages));
   } catch (error) {
     console.error(error);
     res.status(500).send('Server error.');
   }
+});
+
+app.get('/new', ...pageMiddleware, async (req, res) => {
+  try {
+    const pages = await fetchSharedPages(getNotion(req));
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(renderNewPage(pages, defaultPageId));
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Server error.');
+  }
+});
+
+app.post('/new', express.urlencoded({ extended: false }), async (req, res) => {
+  const pageId = normalizePageId(req.body?.pageId || '');
+  if (!pageId) return res.status(400).send('Invalid page ID.');
+  await saveDefaultPage(pageId);
+  res.redirect('/');
 });
 
 app.get('/page/:pageId', ...pageMiddleware, async (req, res) => {

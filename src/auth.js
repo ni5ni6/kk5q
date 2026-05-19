@@ -8,7 +8,7 @@ function generateState() {
 export function requireAuth(req, res, next) {
   if (req.session?.notionToken) return next();
   req.session.returnTo = req.originalUrl;
-  res.redirect('auth/notion');
+  res.redirect('/auth/notion');
 }
 
 export function notionTokenForReq(req) {
