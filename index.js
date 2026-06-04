@@ -36,7 +36,9 @@ const oauthMode = !!(process.env.NOTION_CLIENT_ID && process.env.NOTION_CLIENT_S
 const internalNotion = oauthMode ? null : new Client({ auth: process.env.NOTION_API_KEY });
 
 app.use('/covers', express.static(join(__dirname, 'public', 'covers')));
-app.use(express.json());
+app.use(express.json({
+  verify: (req, _res, buf) => { req.rawBody = buf; },
+}));
 
 app.use(session({
   secret: process.env.SESSION_SECRET || 'change-me-in-production',
@@ -136,11 +138,13 @@ app.post('/cache/invalidate', async (_req, res) => {
 });
 
 // Notion webhook — auto-invalidates a page's cache when it's updated in Notion
-app.post('/webhook/notion', express.raw({ type: 'application/json' }), (req, res) => {
+app.post('/webhook/notion', (req, res) => {
   const secret = process.env.NOTION_WEBHOOK_SECRET;
   if (secret) {
     const sig = req.headers['x-notion-signature'];
-    const expected = 'v0=' + createHmac('sha256', secret).update(req.body).digest('hex');
+    const raw = req.rawBody;
+    if (!raw) return res.status(400).json({ error: 'Missing body.' });
+    const expected = 'v0=' + createHmac('sha256', secret).update(raw).digest('hex');
     try {
       if (!sig || !timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) {
         return res.status(401).json({ error: 'Invalid signature.' });
@@ -150,8 +154,7 @@ app.post('/webhook/notion', express.raw({ type: 'application/json' }), (req, res
     }
   }
 
-  let event;
-  try { event = JSON.parse(req.body); } catch { return res.status(400).json({ error: 'Bad JSON.' }); }
+  const event = req.body;
 
   if (event?.verification_token) {
     console.log(`\n*** Notion verification token: ${event.verification_token} ***\n`);

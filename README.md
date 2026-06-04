@@ -94,7 +94,7 @@ http://localhost:3000/page/:pageId?refresh=1
 
 1. Deploy the server to a public HTTPS URL (e.g. `https://kk51.rs`)
 2. Go to [notion.so/my-integrations](https://www.notion.so/my-integrations) → your integration → **Webhooks** → **Add webhook**
-3. Set the URL to `https://your-domain/webhook/notion`
+3. Set the URL to `https://kk51.rs/webhook/notion`
 4. Select event types: **Page** only (uncheck Database, Data source, View, Comment)
 5. Click **Create subscription** — Notion will POST a verification token to your server
 6. Check your server logs for a line like:
